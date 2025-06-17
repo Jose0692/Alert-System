@@ -116,4 +116,5 @@ try:
 except Exception as e:
     print("⚠️ Error en la conexión:", str(e))
 
-# Finalización del script
+# Fin del script
+# # Finalización del script
