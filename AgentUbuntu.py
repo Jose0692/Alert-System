@@ -114,6 +114,5 @@ try:
         print("❌ Error:", result.get("error", {}).get("message", "Desconocido"))
         
 except Exception as e:
-    print("⚠️ Error en la conexión:", str(e))
+    print("⚠️ Error en la segunda conexión:", str(e))
 
-# Finalización del script
