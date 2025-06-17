@@ -27,7 +27,7 @@ import importlib
 target_ip = "10.234.66.22"
 community = "public"  # Cambia esto si usas una comunidad diferente
 # oid = '1.3.6.1.2.1.1.5.0' # OID para modelo
-oid = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para alerta activa
+oid = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
 
 # Consulta SNMP
 def snmp_get(ip, community, oid):
