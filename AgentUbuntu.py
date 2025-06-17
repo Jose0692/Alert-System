@@ -24,11 +24,13 @@ from pysnmp.hlapi import (
 import importlib
 
 # Configuracion SNMP
-target_ip = "10.234.66.22"
+target_ip = "10.236.2.102" #Sala 6 Florida
+#target_ip = "10.234.0.118" #Sala 7 San Miguel
+#target_ip = "10.234.66.22" #Sala 1 de Lurin
 community = "public"  # Cambia esto si usas una comunidad diferente
 # oid = '1.3.6.1.2.1.1.5.0' # OID para modelo
-#oid = '1.3.6.1.4.1.12612.220.11.2.2.10.5.1.2.1' # OID para alerta activa
-oid = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
+oid = '1.3.6.1.4.1.12612.220.11.2.2.10.5.1.2.1' # OID para alerta activa
+#oid = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
 
 
 # Consulta SNMP
@@ -73,7 +75,8 @@ message = device_name
 # Crear mensaje con formato adecuado
 msg = EmailMessage()
 msg['From'] = email
-msg['To'] = ", ".join(receiver_emails)
+#msg['To'] = ", ".join(receiver_emails)
+msg["Bcc"] = ", ".join(receiver_emails) 
 msg['Subject'] = subject
 msg.set_content(message)
 
@@ -92,32 +95,31 @@ except Exception as e:
 ## ENVIO DE MENSAJE POR WHATSAPP ##
 ###################################
 
-import requests
+#import requests
 
-url = "https://graph.facebook.com/v22.0/745562308629793/messages"
-headers = {
-    "Authorization": "Bearer EAAKPKAtBUfcBOxjxL5DgfCedIivJElYZCopK4uFjxcGsjtaMAFxBcBQ6uguNiZCiryw3OJqFGi9mEM9aTjID5TNDwtCR1RYHksfADzTm3XZC54rRj40pgW38ug6L6DTSgwBHJDDOWwTWZBdYdJeVXM6pAf512nGZCp9mqgTQyhOUbDVJ1Q7gr8sZAAdeSc0A0V5x6JZBNd7CdRfVaw39ZA05NYzRz41rGkfJXBwZD",
-    "Content-Type": "application/json"
-}
-data = {
-    "messaging_product": "whatsapp",
-    "to": "51981283879",
-    "type": "text",
-    "text": {"body": device_name}
-}
+#url = "https://graph.facebook.com/v22.0/745562308629793/messages"
+#headers = {
+#    "Authorization": "Bearer EAAKPKAtBUfcBOxjxL5DgfCedIivJElYZCopK4uFjxcGsjtaMAFxBcBQ6uguNiZCiryw3OJqFGi9mEM9aTjID5TNDwtCR1RYHksfADzTm3XZC54rRj40pgW38ug6L6DTSgwBHJDDOWwTWZBdYdJeVXM6pAf512nGZCp9mqgTQyhOUbDVJ1Q7gr8sZAAdeSc0A0V5x6JZBNd7CdRfVaw39ZA05NYzRz41rGkfJXBwZD",
+#    "Content-Type": "application/json"
+#}
+#data = {
+#    "messaging_product": "whatsapp",
+#    "to": "51981283879",
+#    "type": "text",
+#    "text": {"body": device_name}
+#}
 
-try:
-    response = requests.post(url, headers=headers, json=data)
-    result = response.json()
+#try:
+#    response = requests.post(url, headers=headers, json=data)
+#    result = response.json()
     
-    if response.status_code == 200:
-        print("✅ Mensaje enviado. ID:", result["messages"][0]["id"])
-    else:
-        print("❌ Error:", result.get("error", {}).get("message", "Desconocido"))
+#    if response.status_code == 200:
+#        print("✅ Mensaje enviado. ID:", result["messages"][0]["id"])
+#    else:
+#        print("❌ Error:", result.get("error", {}).get("message", "Desconocido"))
         
-except Exception as e:
-    print("⚠️ Error en la conexión:", str(e))
+#except Exception as e:
+#    print("⚠️ Error en la conexión:", str(e))
 
-# Fin del script
-# # Finalización del script
-## Jose Pardo
+###################################
+###################################
