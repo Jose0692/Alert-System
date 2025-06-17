@@ -62,7 +62,7 @@ from email.message import EmailMessage
 # Configuración Outlook
 email = "odooav@cineplanet.com.pe"
 password = "PlexPEOA25%"
-receiver_email = "jpardo@cineplanet.com.pe"
+receiver_emails = ["jpardo@cineplanet.com.pe", "jmoreno@cineplanet.com.pe"] 
 smtp_server = "smtp.office365.com"
 port = 587
 
@@ -73,7 +73,7 @@ message = device_name
 # Crear mensaje con formato adecuado
 msg = EmailMessage()
 msg['From'] = email
-msg['To'] = receiver_email
+msg['To'] = ", ".join(receiver_emails)
 msg['Subject'] = subject
 msg.set_content(message)
 
@@ -83,7 +83,7 @@ try:
         server.starttls()  # Habilita TLS
         server.login(email, password)
         server.send_message(msg)
-        print(f"Email enviado exitosamente a {receiver_email}")
+        print(f"Email enviado exitosamente a {receiver_emails}")
         
 except Exception as e:
     print(f"Error al enviar el correo: {str(e)}")
