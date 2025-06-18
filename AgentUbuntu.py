@@ -23,10 +23,11 @@ from pysnmp.hlapi import (
 )
 import importlib
 
+location = "Lurin / Sala 1 / "
 # Configuracion SNMP
-target_ip = "10.236.2.102" #Sala 6 Florida
+#target_ip = "10.236.2.102" #Sala 6 Florida
 #target_ip = "10.234.0.118" #Sala 7 San Miguel
-#target_ip = "10.234.66.22" #Sala 1 de Lurin
+target_ip = "10.234.66.22" #Sala 1 de Lurin
 community = "public"  # Cambia esto si usas una comunidad diferente
 # oid = '1.3.6.1.2.1.1.5.0' # OID para modelo
 oid = '1.3.6.1.4.1.12612.220.11.2.2.10.5.1.2.1' # OID para alerta activa
@@ -52,7 +53,7 @@ def snmp_get(ip, community, oid):
             return f'{varBind[1]}'
 
 # Obtener info SNMP
-device_name = snmp_get(target_ip, community, oid)
+device_alert = snmp_get(target_ip, community, oid)
 
 #################################################
 ## ENVIO DE CORREO ELECTRONICO POR OUTLOOK 365 ##
@@ -62,34 +63,54 @@ import smtplib
 from email.message import EmailMessage
 
 # Configuración Outlook
-email = "odooav@cineplanet.com.pe"
-password = "PlexPEOA25%"
+#email = "odooav@cineplanet.com.pe"
+#password = "PlexPEOA25%"
+email = "noc@cineplanet.com.pe"
+password = "PlexPENA25%"
 receiver_emails = ["jpardo@cineplanet.com.pe", "jmoreno@cineplanet.com.pe"] 
 smtp_server = "smtp.office365.com"
 port = 587
 
-# Datos del mensaje
-subject = target_ip  # Asume que estas variables están definidas
-message = device_name
+device_alert = device_alert
+alert_detail = []
+contador_alertas = 0
 
-# Crear mensaje con formato adecuado
+# 1. Verificar si hay error SNMP
+if "SNMP error" in device_alert or "No Such Instance" in device_alert:
+    alert_detail.append(f"Error en la consulta SNMP: {device_alert}")
+else:
+    # 2. Si es una cadena con múltiples líneas, splitear por saltos de línea
+    alerts = device_alert.split('\n') if '\n' in device_alert else [device_alert]
+    
+    # 3. Procesar cada alerta
+    for alert in alerts:
+        parts = alert.split()
+        if len(parts) >= 3:  # Asegurar que tiene formato "N 6200 texto - descripción"
+            type_alert = parts[0]  
+            if type_alert=="W":  # Verificar si es una alerta de tipo "N"
+                type_alert = "Advertencia"
+            code_alert = parts[1]  
+            alert_text = ' '.join(parts[2:]) 
+            alert_detail.append(alert_text)
+        else:
+            alert_detail.append(alert)  # Mantener el texto original si no cumple formato
+
+#SE CREA EL CORREO
 msg = EmailMessage()
 msg['From'] = email
-#msg['To'] = ", ".join(receiver_emails)
-msg["Bcc"] = ", ".join(receiver_emails) 
-msg['Subject'] = subject
-msg.set_content(message)
+msg['To'] = ", ".join(receiver_emails)
+msg['Subject'] = location + " " + " | ".join(alert_detail)
+msg.set_content(f"Tipo: {type_alert}\nCódigo: {code_alert}\nDetalle: " + "".join(alert_detail))
 
+#SE ENVIA CORREO
 try:
-    # Conexión segura
     with smtplib.SMTP(smtp_server, port) as server:
-        server.starttls()  # Habilita TLS
+        server.starttls()
         server.login(email, password)
         server.send_message(msg)
-        print(f"Email enviado exitosamente a {receiver_emails}")
-        
+        print(f"✅ Email enviado a {receiver_emails}")
 except Exception as e:
-    print(f"Error al enviar el correo: {str(e)}")
+    print(f"❌ Error al enviar correo: {str(e)}")
 
 ###################################
 ## ENVIO DE MENSAJE POR WHATSAPP ##
