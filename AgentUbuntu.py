@@ -15,24 +15,29 @@
 #pip uninstall pyasn1 -y
 #pip install pyasn1==0.4.8
 
-#Liberias necesarias
+# LIBRERIAS NECESARIAS #
 import smtplib
 from pysnmp.hlapi import (
     SnmpEngine, CommunityData, UdpTransportTarget,
     ContextData, ObjectType, ObjectIdentity, getCmd
 )
 import importlib
+from email.message import EmailMessage
 
-location = "Lurin / Sala 1 / "
-# Configuracion SNMP
-#target_ip = "10.236.2.102" #Sala 6 Florida
-#target_ip = "10.234.0.118" #Sala 7 San Miguel
-target_ip = "10.234.66.22" #Sala 1 de Lurin
+# CONFIGURACION SNMP #
+target_ips = [
+    "10.234.0.22", "10.234.0.38", "10.234.0.54", "10.234.0.70", "10.234.0.86",
+    "10.234.0.102", "10.234.0.118", "10.234.0.134", "10.234.0.150", "10.234.0.166",
+    "10.234.0.182", "10.234.0.198", "10.234.0.214", "10.234.0.230",
+    "10.234.66.22",  "10.234.66.38",  "10.234.66.54", 
+    #"10.236.2.22",  "10.236.2.38",  "10.236.2.54",  "10.236.2.70",  "10.236.2.86", 
+    #"10.236.2.102",  "10.236.2.118",  "10.236.2.134",  "10.236.2.150",  "10.236.2.166", 
+    #"10.236.2.182"  
+]
 community = "public"  # Cambia esto si usas una comunidad diferente
-# oid = '1.3.6.1.2.1.1.5.0' # OID para modelo
+oid_model = '1.3.6.1.2.1.1.5.0' 
 oid = '1.3.6.1.4.1.12612.220.11.2.2.10.5.1.2.1' # OID para alerta activa
 #oid = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
-
 
 # Consulta SNMP
 def snmp_get(ip, community, oid):
@@ -51,66 +56,92 @@ def snmp_get(ip, community, oid):
     else:
         for varBind in var_binds:
             return f'{varBind[1]}'
-
-# Obtener info SNMP
-device_alert = snmp_get(target_ip, community, oid)
-
-#################################################
-## ENVIO DE CORREO ELECTRONICO POR OUTLOOK 365 ##
-#################################################
-
-import smtplib
-from email.message import EmailMessage
-
-# Configuración Outlook
-#email = "odooav@cineplanet.com.pe"
-#password = "PlexPEOA25%"
+        
+# Configuración Outlook (sin cambios)
 email = "noc@cineplanet.com.pe"
-password = "PlexPENA25%"
+password = "2025AV123/321"
 receiver_emails = ["jpardo@cineplanet.com.pe", "jmoreno@cineplanet.com.pe"] 
 smtp_server = "smtp.office365.com"
 port = 587
 
-device_alert = device_alert
-alert_detail = []
-contador_alertas = 0
+def process_ip(target_ip):
+    # IDENTIFICACION DE COMPLEJO POR IP (sin cambios)
+    octetos = target_ip.split('.')
+    tercer_octeto = octetos[2]
+    if tercer_octeto == '66':
+        location_name = "Lurin"
+    elif tercer_octeto == '0':
+        location_name = "San Miguel"
+    else:
+        location_name = "Desconocido"
 
-# 1. Verificar si hay error SNMP
-if "SNMP error" in device_alert or "No Such Instance" in device_alert:
-    alert_detail.append(f"Error en la consulta SNMP: {device_alert}")
-else:
-    # 2. Si es una cadena con múltiples líneas, splitear por saltos de línea
-    alerts = device_alert.split('\n') if '\n' in device_alert else [device_alert]
-    
-    # 3. Procesar cada alerta
-    for alert in alerts:
-        parts = alert.split()
-        if len(parts) >= 3:  # Asegurar que tiene formato "N 6200 texto - descripción"
-            type_alert = parts[0]  
-            if type_alert=="W":  # Verificar si es una alerta de tipo "N"
-                type_alert = "Advertencia"
-            code_alert = parts[1]  
-            alert_text = ' '.join(parts[2:]) 
-            alert_detail.append(alert_text)
-        else:
-            alert_detail.append(alert)  # Mantener el texto original si no cumple formato
+    # IDENTIFICACION DE SALA POR IP (sin cambios)
+    cuarto_octeto = octetos[3]
+    if cuarto_octeto == '22':        screen_number = "1"
+    elif cuarto_octeto == '38':        screen_number = "2"
+    elif cuarto_octeto == '54':        screen_number = "3"
+    elif cuarto_octeto == '70':        screen_number = "4"
+    elif cuarto_octeto == '86':        screen_number = "5"
+    elif cuarto_octeto == '102':        screen_number = "6"
+    elif cuarto_octeto == '118':        screen_number = "7"
+    elif cuarto_octeto == '134':        screen_number = "8"
+    elif cuarto_octeto == '150':        screen_number = "9"
+    elif cuarto_octeto == '166':        screen_number = "10"
+    elif cuarto_octeto == '182':        screen_number = "11"
+    elif cuarto_octeto == '198':        screen_number = "12"
+    elif cuarto_octeto == '214':        screen_number = "13"
+    elif cuarto_octeto == '230':        screen_number = "14"
+    else:
+        screen_number = "Desconocida"
 
-#SE CREA EL CORREO
-msg = EmailMessage()
-msg['From'] = email
-msg['To'] = ", ".join(receiver_emails)
-msg['Subject'] = location + " " + " | ".join(alert_detail)
-msg.set_content(f"Tipo: {type_alert}\nCódigo: {code_alert}\nDetalle: " + "".join(alert_detail))
+    # OBTENER INFO SNMP
+    device_alert = snmp_get(target_ip, community, oid)
+    device_model = snmp_get(target_ip, community, oid_model)
 
-#SE ENVIA CORREO
-try:
-    with smtplib.SMTP(smtp_server, port) as server:
-        server.starttls()
-        server.login(email, password)
-        server.send_message(msg)
-        print(f"✅ Email enviado a {receiver_emails}")
-except Exception as e:
-    print(f"❌ Error al enviar correo: {str(e)}")
+    alert_detail = []
+    type_alert = ""
+    code_alert = ""
+
+    # Procesar alertas (sin cambios)
+    if "SNMP error" in device_alert or "No Such Instance" in device_alert:
+        alert_detail.append(f"Error en la consulta SNMP: {device_alert}")
+    else:
+        alerts = device_alert.split('\n') if '\n' in device_alert else [device_alert]
+        
+        for alert in alerts:
+            parts = alert.split()
+            if len(parts) >= 3:
+                type_alert = parts[0]  
+                if type_alert=="W":
+                    type_alert = "Advertencia"
+                code_alert = parts[1]  
+                alert_text = ' '.join(parts[2:]) 
+                alert_detail.append(alert_text)
+            else:
+                alert_detail.append(alert)
+
+    # Solo enviar correo si hay alertas
+    if alert_detail and any(alert.strip() for alert in alert_detail if "SNMP error" not in alert):
+        msg = EmailMessage()
+        msg['From'] = email
+        msg['To'] = ", ".join(receiver_emails)
+        msg['Subject'] = f"{location_name} | Sala {screen_number} | {alert_detail}" 
+        msg.set_content(f"Complejo: {location_name}\nSala: {screen_number}\nModelo: {device_model}\nAlertas:\n" + "\n".join(alert_detail))
+
+        try:
+            with smtplib.SMTP(smtp_server, port) as server:
+                server.starttls()
+                server.login(email, password)
+                server.send_message(msg)
+                print(f"✅ Email enviado para {target_ip}")
+        except Exception as e:
+            print(f"❌ Error al enviar correo para {target_ip}: {str(e)}")
+    else:
+        print(f"ℹ️ No se envió correo para {target_ip} - No hay alertas válidas")
+
+# Procesar todas las IPs
+for ip in target_ips:
+    process_ip(ip)
 
 ###################################
 ## ENVIO DE MENSAJE POR WHATSAPP ##
