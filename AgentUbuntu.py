@@ -2,178 +2,451 @@
 ## AGENTE DESARROLADO POR JJ ##
 ###############################
 
-#Version de python: 3.11.9
+#VERSION DE PHYTON: 3.11.9
 
-########################
-## CONFIGURACION SMTP ##
-########################
-
-#Descargar libreria PYSNMP
+#DESCARGAR LIBRERIA PYSNMP
 #pip uninstall pysnmp -y
 #pip install pysnmp==4.4.12
-#Descargar libreria PYASN1
+#DESCARGAR LIBRERIA PYASN1
 #pip uninstall pyasn1 -y
 #pip install pyasn1==0.4.8
 
 # LIBRERIAS NECESARIAS #
-import smtplib
+
+import threading
+import json
 import time
-from pysnmp.hlapi import (
-    SnmpEngine, CommunityData, UdpTransportTarget,
-    ContextData, ObjectType, ObjectIdentity, getCmd
-)
-import importlib
+import os
+import requests
+import smtplib
 from email.message import EmailMessage
+import configparser
+import requests
+import json
+import requests
+import json
+import socket
+import re
 
-# CONFIGURACION SNMP #
-proyectores = {
-    "1": {"ip": "10.234.86.22", "status_proyector": 0, "screen_number": "Sala 1", "location_name": "Santa Catalina"},
-    "2": {"ip": "10.234.86.38", "status_proyector": 0, "screen_number": "Sala 2", "location_name": "Santa Catalina"},
-    "3": {"ip": "10.234.86.54", "status_proyector": 0, "screen_number": "Sala 3", "location_name": "Santa Catalina"},
-    "4": {"ip": "10.234.86.70", "status_proyector": 0, "screen_number": "Sala 4", "location_name": "Santa Catalina"},
-    "5": {"ip": "10.234.86.86", "status_proyector": 0, "screen_number": "Sala 5", "location_name": "Santa Catalina"},
-    "6": {"ip": "10.234.86.102", "status_proyector": 0, "screen_number": "Sala 6", "location_name": "Santa Catalina"}
-}
+url_cines="http://localhost:8000/cines"
+url_zonas="http://localhost:8000/zonas"
+url_paises="http://localhost:8000/paises"
+url_salas="http://localhost:8000/salas"
+smtp_server="smtp.office365.com"
+noc_email="noc@cineplanet.com.pe"
+pass_noc_email ="2025AV123/321"
+whatsapp_number="51981283879"
+url_whatsapp_api="https://graph.facebook.com/v22.0/745562308629793/messages"
+authorization_beaver="Bearer EAAKPKAtBUfcBOxjxL5DgfCedIivJElYZCopK4uFjxcGsjtaMAFxBcBQ6uguNiZCiryw3OJqFGi9mEM9aTjID5TNDwtCR1RYHksfADzTm3XZC54rRj40pgW38ug6L6DTSgwBHJDDOWwTWZBdYdJeVXM6pAf512nGZCp9mqgTQyhOUbDVJ1Q7gr8sZAAdeSc0A0V5x6JZBNd7CdRfVaw39ZA05NYzRz41rGkfJXBwZD"
 
-community = "public" 
-oid_model = '1.3.6.1.2.1.1.1.0' 
-oid_name = '1.3.6.1.2.1.1.5.0' 
-oid = '1.3.6.1.4.1.12612.220.11.2.2.10.5.1.2.1' # OID para descripcion de alerta activa
-#oid_horas_consumidas = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
-#oid_horas_restantes = '1.3.6.1.4.1.12612.220.11.2.2.4.8.1.2.1'  # OID para hora de lampara consumida
-oid_error_global  = '1.3.6.1.4.1.12612.220.11.2.3.0.10.0'
-oid_warning  = '1.3.6.1.4.1.12612.220.11.2.3.0.11.0'
-oid_notification = '1.3.6.1.4.1.12612.220.11.2.3.0.12.0'
+def cargar_config(ruta="config.json"):
+    with open(ruta, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-# CONSULTA SNMP #
-def snmp_get(ip, community, oid):
-    error_indication, error_status, error_index, var_binds = next(
-        getCmd(SnmpEngine(),
-               CommunityData(community, mpModel=0),  # SNMPv1
-               UdpTransportTarget((ip, 161)),
-               ContextData(),
-               ObjectType(ObjectIdentity(oid)))
+def generar_config(
+    cine_id,
+):
+    try:
+        # Consumir los servicios
+        cines = requests.get(url_cines).json()
+        zonas = requests.get(url_zonas).json()
+        paises = requests.get(url_paises).json()
+        salas = requests.get(url_salas).json()
+
+        # Buscar cine
+        cine = next((c for c in cines if c["id_cine"] == cine_id), None)
+        if not cine:
+            raise ValueError(f"Cine con id {cine_id} no encontrado")
+
+        # Buscar zona
+        zona = next((z for z in zonas if z["id_zona"] == cine["id_zona"]), None)
+        if not zona:
+            raise ValueError(f"Zona con id {cine['id_zona']} no encontrada")
+
+        # Buscar país
+        pais = next((p for p in paises if p["id_pais"] == zona["id_pais"]), None)
+        if not pais:
+            raise ValueError(f"País con id {zona['id_pais']} no encontrado")
+
+        # Contar salas
+        num_salas = sum(1 for s in salas if s["id_cine"] == cine_id)
+
+        # Armar config completo
+        config = {
+            "cine_id": cine["id_cine"],
+            "cine_numero": cine["num_cine"], 
+            "cine_nombre": cine["nombre_cine"],
+            "cine_num_salas": num_salas,
+            "cine_pais": pais["nombre_pais"],
+            "cine_zona": zona["nombre_zona"],
+            "pais_octeto": pais["octeto_pais"],
+            "zona_correo": zona["correo_zona"],
+            "smtp_server" : smtp_server,
+            "smtp_port" : 587,
+            "email_user" : noc_email,
+            "email_pass" : pass_noc_email,
+            "telefono_wahtsapp" : whatsapp_number,
+            "proyector_inicio": 22,
+            "servidor_inicio": 26,
+            "sala_salto": 16
+        }
+
+        # Guardar en config.info
+        with open("config.json", "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+
+        print("✅ Archivo config.info generado correctamente.")
+        return config
+
+    except Exception as e:
+        print("⚠️ Error al generar config:", str(e))
+        return None
+
+def generar_ip(cine_config, tipo, indice):
+    base = f"10.{cine_config['pais_octeto']}.{cine_config['cine_numero']}"
+    if tipo == "proyector":
+        host = cine_config['proyector_inicio'] + (indice * cine_config['sala_salto'])
+    elif tipo == "servidor":
+        host = cine_config['servidor_inicio'] + (indice * cine_config['sala_salto'])
+    else:
+        raise ValueError("Tipo desconocido")
+    return f"{base}.{host}"
+
+def generar_equipos(cine_config, archivo_json="estado_equipo.json"):
+
+    if os.path.exists(archivo_json):
+        try:
+            with open(archivo_json, "r", encoding="utf-8") as f:
+                equipos_existentes = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            equipos_existentes = []
+    else:
+        equipos_existentes = []
+    
+    equipos_nuevos = []
+    for i in range(cine_config["cine_num_salas"]):
+        sala_numero = i + 1
+        
+        proyector_ip = generar_ip(cine_config, "proyector", i)
+        # Buscar si ya existe información de este proyector
+        proyector_existente = next((eq for eq in equipos_existentes 
+                                  if eq["ip"] == proyector_ip and eq["tipo"] == "proyector"), None)
+        
+        if proyector_existente:
+            # Mantener datos existentes y actualizar estructura si es necesario
+            equipo_proyector = {
+                "tipo": "proyector",
+                "sala": sala_numero,
+                "ip": proyector_ip,
+                "modelo": proyector_existente.get("modelo"),
+                "estado_alerta": proyector_existente.get("estado_alerta"),
+                "consumibles": proyector_existente.get("consumibles", []),
+                "alertas": proyector_existente.get("alertas", []),
+                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "estado": proyector_existente.get("estado", "desconocido")
+            }
+        else:
+            # Crear nuevo equipo
+            equipo_proyector = {
+                "tipo": "proyector",
+                "sala": sala_numero,
+                "ip": proyector_ip,
+                "modelo": None,
+                "estado_alerta": "Sin alerta",
+                "consumibles": [],
+                "alertas": [],
+                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "estado": "activo"
+            }
+        
+        equipos_nuevos.append(equipo_proyector)
+        
+        # Servidor
+        servidor_ip = generar_ip(cine_config, "servidor", i)
+        # Buscar si ya existe información de este servidor
+        servidor_existente = next((eq for eq in equipos_existentes 
+                                 if eq["ip"] == servidor_ip and eq["tipo"] == "servidor"), None)
+        
+        if servidor_existente:
+            equipo_servidor = {
+                "tipo": "servidor",
+                "sala": sala_numero,
+                "ip": servidor_ip,
+                "modelo": servidor_existente.get("modelo"),
+                "consumibles": servidor_existente.get("consumibles", []),
+                "alertas": servidor_existente.get("alertas", []),
+                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "estado": servidor_existente.get("estado", "desconocido")
+            }
+        else:
+            equipo_servidor = {
+                "tipo": "servidor",
+                "sala": sala_numero,
+                "ip": servidor_ip,
+                "modelo": None,
+                "consumibles": [],
+                "alertas": [],
+                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "estado": "activo"
+            }
+        
+        equipos_nuevos.append(equipo_servidor)
+    
+    # Guardar en el archivo JSON
+    with open(archivo_json, "w", encoding="utf-8") as f:
+        json.dump(equipos_nuevos, f, indent=4, ensure_ascii=False)
+    
+    print(f"Archivo {archivo_json} generado/actualizado con {len(equipos_nuevos)} equipos")
+    return equipos_nuevos
+
+def conectar_equipo_tcp(ip, puerto):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((ip, puerto))
+        print(f"Conectado al proyector en {ip}:{puerto} por TCP")
+        return s
+    except Exception as e:
+        print(f"Error al conectar por TCP: {e}")
+        return None
+
+def conectar_proyectores_tcp(archivo_json="estado_equipo.json", puerto=43728):
+
+    conexiones = {}
+
+    if not os.path.exists(archivo_json):
+        print(f"El archivo {archivo_json} no existe.")
+        return
+
+    with open(archivo_json, "r", encoding="utf-8") as f:
+        equipos = json.load(f)
+
+    for equipo in equipos:
+        if equipo.get("tipo") == "proyector":
+            ip = equipo.get("ip")
+            print(f"Intentando conectar al proyector en IP: {ip}")
+            conexion = conectar_equipo_tcp(ip, puerto)
+            if conexion:
+                conexiones[ip] = conexion
+
+    return conexiones
+
+def enviar_comando_hex(s, comando_hex):
+    try:
+        comando = bytes.fromhex(comando_hex)
+        s.sendall(comando)
+        print(f"Comando enviado: {comando_hex}")
+    except Exception as e:
+        print(f"Error al enviar comando: {e}")
+
+def leer_respuesta_ascii(s, buffer_size=4096, timeout=2):
+    try:
+        s.settimeout(timeout)
+        data_total = b""
+        while True:
+            try:
+                data = s.recv(buffer_size)
+                if not data:
+                    break
+                data_total += data
+            except socket.timeout:
+                break
+        
+        if data_total:
+                      
+            try:
+                ascii_text = data_total.decode("ascii", errors="ignore")
+                print("Respuesta en ASCII:", ascii_text.strip())
+            except Exception as e:
+                print(f"No se pudo decodificar en ASCII: {e}")
+        else:
+            print("No se recibió respuesta")
+
+        return data_total
+    except Exception as e:
+        print(f"Error al leer respuesta: {e}")
+        return b""
+
+def procesar_mensajes_texto(ascii_text):
+    """Procesa mensajes de alertas en texto ignorando basura antes del XML"""
+    # 🔎 Buscar dónde empieza realmente el XML
+    inicio = ascii_text.find("<?xml")
+    if inicio != -1:
+        ascii_text = ascii_text[inicio:]
+    else:
+        print("⚠️ No se encontró XML en la respuesta")
+        return
+
+    # Buscar todos los mensajes <message ...> ... </message>
+    patron = r'<message identifier="([^"]+)" type="([^"]+)">(.*?)</message>'
+    coincidencias = re.findall(patron, ascii_text, re.DOTALL)
+
+    if not coincidencias:
+        print("⚠️ No se encontraron mensajes en la respuesta")
+        return
+
+    for idx, (identificador, tipo, alerta) in enumerate(coincidencias, start=1):
+        print(f"\n📌 Mensaje {idx}")
+        print(f"Identificador: {identificador}")
+        print(f"Tipo: {tipo}")
+        print(f"Alerta: {alerta.strip()}")
+
+def consultar_tcp_numero_alertas(s):
+    
+    enviar_comando_hex(s, "FE 00 81 04 17 9C FF")
+    data = leer_respuesta_ascii(s)
+    if not data:
+        return
+
+    try:
+        idx = data.index(bytes.fromhex("81 04 17"))
+        valores = data[idx+3:idx+15]  # 12 bytes después de 81 04 17
+        notificaciones = int.from_bytes(valores[0:4], "big")
+        warnings = int.from_bytes(valores[4:8], "big")
+        errores = int.from_bytes(valores[8:12], "big")
+
+        if notificaciones == 0 and warnings == 0 and errores == 0:
+            print("✅ No hay alertas activas")
+        else:
+            print(f"⚠️ Alertas activas -> Notificaciones: {notificaciones}, Warnings: {warnings}, Errores: {errores}")
+            
+            # Enviar FE 00 81 04 1A 9F FF si hay alertas
+            enviar_comando_hex(s, "FE 00 81 04 1A 9F FF")
+            data_alertas = leer_respuesta_ascii(s)
+            if data_alertas:
+                ascii_text = data_alertas.decode("ascii", errors="ignore")
+                procesar_mensajes_texto(ascii_text)
+
+    except ValueError:
+        print("⚠️ No se encontró la cabecera 81 04 17 en la respuesta")
+
+def consultar_tcp_estado(s, comando_hex, intervalo=5):
+    print("Consultando estado por TCP...")
+
+def consultar_snmp(ip, oid="1.3.6.1.2.1.1.1.0"):
+    print("Aqui hago consultas SNMP", ip)
+
+def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
+  
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
+    receiver_email = cine_config.get("zona_correo")
+    receiver_email_cc = cine_config.get("email_user")
+    smtp_server = cine_config.get("smtp_server")
+    smtp_port = cine_config.get("smtp_port")
+    email_user = cine_config.get("email_user")
+    email_pass = cine_config.get("email_pass")
+
+    if not alertas or all("SNMP error" in alerta for alerta in alertas):
+        print("No hay alertas válidas para enviar por correo.")
+        return
+
+    subject = f"{complejo} | Sala {sala} | ALERTA DETECTADA"
+    body = (
+        f"📢 *Alerta detectada*\n\n"
+        f"🎬 Complejo: {complejo}\n"
+        f"🖥️ Sala: {sala}\n"
+        f"📦 Modelo: {modelo}\n\n"
+        f"⚠️ Alertas:\n" + "\n".join(alertas)
     )
 
-    if error_indication:
-        return f"SNMP error: {error_indication}"
-    elif error_status:
-        return f"{error_status.prettyPrint()}"
-    else:
-        for varBind in var_binds:
-            return f'{varBind[1]}'
+    msg = EmailMessage()
+    msg["From"] = email_user
+    msg["To"] = receiver_email
+    msg["Cc"] = receiver_email_cc
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP(smtp_server,smtp_port) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+            print(f"Email enviado a {', '.join(receiver_email)}")
+    except Exception as e:
+        print(f"Error al enviar correo: {str(e)}")
+
+def enviar_alerta_whatsapp(cine_config, complejo, sala, modelo, alertas):
         
-# CONFIGURACIÓN DE ENVIO DE CORREO #
-email = "noc@cineplanet.com.pe"
-password = "2025AV123/321"
-receiver_emails = ["jpardo@cineplanet.com.pe"] 
-smtp_server = "smtp.office365.com"
-port = 587
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    
+    telefono_wahtsapp = cine_config.get("telefono_wahtsapp")
 
-def capturar_envio_alerta(proyector_data):  
+    url = url_whatsapp_api
+    headers = {
+        "Authorization": authorization_beaver,
+        "Content-Type": "application/json"
+    }
 
-    target_ip = proyector_data["ip"]  
-    location_name = proyector_data["location_name"]
-    screen_number = proyector_data["screen_number"]
-    status_proyector = proyector_data["status_proyector"]
+    cuerpo = f" *Alerta en Complejo {complejo}*\n\n Sala: {sala}\n Mensaje: {alertas}"
 
-    # OBTENER INFO SNMP
-    device_alert_warning = snmp_get(target_ip, community, oid_error_global) # LECTURA DE ALERTA DE ADVERTENCIA
+    data = {
+        "messaging_product": "whatsapp",
+        "to": telefono_wahtsapp, 
+        "type": "text",
+        "text": {"body": cuerpo}
+    }
 
-    if status_proyector == device_alert_warning :
-        print(f"No hay alertas para {target_ip}")
-    else:
-        proyector_data["status_proyector"] = device_alert_warning
-
-        device_alert_description = snmp_get(target_ip, community, oid)
-        device_model = snmp_get(target_ip, community, oid_model)
-
-        alert_detail = []
-        type_alert = ""
-        code_alert = ""
-
-        # Procesar alertas (sin cambios)
-        if "SNMP error" in device_alert_description or "No Such Instance" in device_alert_description:
-            alert_detail.append(f"Error en la consulta SNMP: {device_alert_description}")
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        result = response.json()
+        
+        if response.status_code == 200:
+            print("Mensaje enviado. ID:", result["messages"][0]["id"])
         else:
-            alerts = device_alert_description.split('\n') if '\n' in device_alert_description else [device_alert_description]
+            print("Error:", result.get("error", {}).get("message", "Desconocido"))
             
-            for alert in alerts:
-                parts = alert.split()
-                if len(parts) >= 3:
-                    type_alert = parts[0]  
-                    if type_alert=="W":
-                        type_alert = "Advertencia"
-                    code_alert = parts[1]  
-                    alert_text = ' '.join(parts[2:]) 
-                    alert_detail.append(alert_text)
-                else:
-                    alert_detail.append(alert)
+    except Exception as e:
+        print("Error en la conexión:", str(e))
 
-        # Solo enviar correo si hay alertas
-        if alert_detail and any(alert.strip() for alert in alert_detail if "SNMP error" not in alert):
-            msg = EmailMessage()
-            msg['From'] = email
-            msg['To'] = ", ".join(receiver_emails)
-            msg['Subject'] = f"{location_name} | Sala {screen_number} | {alert_detail}" 
-            msg.set_content(f"Complejo: {location_name}\nSala: {screen_number}\nModelo: {device_model}\nAlertas:\n" + "\n".join(alert_detail))
+def ciclo_monitoreo_continuo(cine_config):
+    cine_config = cargar_config()
+    num_salas = cine_config.get("cine_num_salas", 0)
 
-            try:
-                with smtplib.SMTP(smtp_server, port) as server:
-                    server.starttls()
-                    server.login(email, password)
-                    server.send_message(msg)
-                    print(f"Email enviado para {target_ip}")
-            except Exception as e:
-                print(f"Error al enviar correo para {target_ip}: {str(e)}")
-        else:
-            print(f"No se envió correo para {target_ip} - No hay alertas válidas")
+    while True:  
+        print("Consultando por alertas...")
+        for i in range(num_salas):
+            proyector_ip = generar_ip(cine_config, "proyector", i)
+            servidor_ip  = generar_ip(cine_config, "servidor", i)
 
-# PROCESA CADA IP EN LA LISTA #
-def monitorizar_ips(proyectores, intervalo=10):
-    print("Iniciando monitoreo de proyectores...")
-    while True:
-        try:
-            for proyector_id, proyector_data in proyectores.items():
-                print(f"\nConsultando proyector {proyector_id} ({proyector_data['ip']})...")
-                capturar_envio_alerta(proyector_data)
-            time.sleep(intervalo)
-        except KeyboardInterrupt:
-            print("\nMonitor detenido manualmente")
-            break
+            resultado_tcp_proyector = consultar_tcp_estado(proyector_ip)
+            resultado_tcp_servidor = consultar_tcp_estado(servidor_ip)
+
+        print("Revision completa")
+        
+        time.sleep(1)
+
+def ciclo_actualizacion_equipos(cine_config):
+    generar_equipos(cine_config)
+    print("Iniciando ciclo de actualizacion de equipos...")
 
 if __name__ == "__main__":
-    monitorizar_ips(proyectores, intervalo=10)    
 
-###################################
-## ENVIO DE MENSAJE POR WHATSAPP ##
-###################################
+    cine_config = cargar_config()
+    generar_config(cine_config["cine_id"])
 
-#import requests
+    time.sleep(3)
 
-#url = "https://graph.facebook.com/v22.0/745562308629793/messages"
-#headers = {
-#    "Authorization": "Bearer EAAKPKAtBUfcBOxjxL5DgfCedIivJElYZCopK4uFjxcGsjtaMAFxBcBQ6uguNiZCiryw3OJqFGi9mEM9aTjID5TNDwtCR1RYHksfADzTm3XZC54rRj40pgW38ug6L6DTSgwBHJDDOWwTWZBdYdJeVXM6pAf512nGZCp9mqgTQyhOUbDVJ1Q7gr8sZAAdeSc0A0V5x6JZBNd7CdRfVaw39ZA05NYzRz41rGkfJXBwZD",
-#    "Content-Type": "application/json"
-#}
-#data = {
-#    "messaging_product": "whatsapp",
-#    "to": "51981283879",
-#    "type": "text",
-#    "text": {"body": device_name}
-#}
+    cine_nueva_config = cargar_config()
+    generar_equipos(cine_nueva_config)
 
-#try:
-#    response = requests.post(url, headers=headers, json=data)
-#    result = response.json()
-    
-#    if response.status_code == 200:
-#        print("✅ Mensaje enviado. ID:", result["messages"][0]["id"])
-#    else:
-#        print("❌ Error:", result.get("error", {}).get("message", "Desconocido"))
-        
-#except Exception as e:
-#    print("⚠️ Error en la conexión:", str(e))
+    print("------------------------------------------------------------")
+    print("---------------INICIANDO AGENTE DE MONITOREO----------------")
+    print("------------------------------------------------------------")
 
-###################################
-###################################
+    print("REVISION INICIAL COMPLETA, INICIANDO MONITOREO CONTINUO...")
+    time.sleep(3)
+
+    print("ESTABLECIENDO CONEXIONES TCP A PROYECTORES...")
+    conexiones = conectar_proyectores_tcp()
+    time.sleep(3)
+
+    thead1 = threading.Thread(target=ciclo_monitoreo_continuo, args=(cine_nueva_config,))
+    thead2 = threading.Thread(target=ciclo_actualizacion_equipos, args=(cine_nueva_config,))
+
+    thead1.start()
+    thead2.start()
+
+    thead1.join()
+    thead2.join()
