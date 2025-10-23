@@ -1,18 +1,3 @@
-###############################
-## AGENTE DESARROLADO POR JJ ##
-###############################
-
-#VERSION DE PHYTON: 3.11.9
-
-#DESCARGAR LIBRERIA PYSNMP
-#pip uninstall pysnmp -y
-#pip install pysnmp==4.4.12
-#DESCARGAR LIBRERIA PYASN1
-#pip uninstall pyasn1 -y
-#pip install pyasn1==0.4.8
-
-# LIBRERIAS NECESARIAS #
-
 import threading
 import json
 import time
@@ -20,24 +5,12 @@ import os
 import requests
 import smtplib
 from email.message import EmailMessage
-import configparser
-import requests
-import json
-import requests
 import json
 import socket
 import re
+from dotenv import load_dotenv
 
-url_cines="http://localhost:8000/cines"
-url_zonas="http://localhost:8000/zonas"
-url_paises="http://localhost:8000/paises"
-url_salas="http://localhost:8000/salas"
-smtp_server="smtp.office365.com"
-noc_email="jpardo@cineplanet.com.pe"
-pass_noc_email ="PlanetCineJP23$"
-whatsapp_number="51981283879"
-url_whatsapp_api="https://graph.facebook.com/v22.0/745562308629793/messages"
-authorization_beaver="Bearer EAAKPKAtBUfcBOxjxL5DgfCedIivJElYZCopK4uFjxcGsjtaMAFxBcBQ6uguNiZCiryw3OJqFGi9mEM9aTjID5TNDwtCR1RYHksfADzTm3XZC54rRj40pgW38ug6L6DTSgwBHJDDOWwTWZBdYdJeVXM6pAf512nGZCp9mqgTQyhOUbDVJ1Q7gr8sZAAdeSc0A0V5x6JZBNd7CdRfVaw39ZA05NYzRz41rGkfJXBwZD"
+load_dotenv('.env')
 
 class GestorConexionesTCP:
     def __init__(self, puerto=43728, timeout_conexion=5, timeout_lectura=2):
@@ -103,6 +76,10 @@ def cargar_config_cine(ruta="config_cine.json"):
 def generar_config_cine(cine_id):
     try:
         # Consumir los servicios
+        url_cines =os.getenv("url_cines")
+        url_zonas = os.getenv("url_zonas")
+        url_paises =os.getenv("url_paises")
+        url_salas = os.getenv("url_salas")
         cines = requests.get(url_cines).json()
         zonas = requests.get(url_zonas).json()
         paises = requests.get(url_paises).json()
@@ -136,11 +113,7 @@ def generar_config_cine(cine_id):
             "cine_zona": zona["nombre_zona"],
             "pais_octeto": pais["octeto_pais"],
             "zona_correo": zona["correo_zona"],
-            "smtp_server": smtp_server,
-            "smtp_port": 587,
-            "email_user": noc_email,
-            "email_pass": pass_noc_email,
-            "telefono_wahtsapp": whatsapp_number,
+            "telefono_wahtsapp": os.getenv("whatsapp_number"),
             "proyector_inicio": 22,
             "servidor_inicio": 26,
             "sala_salto": 16
@@ -506,25 +479,9 @@ def ciclo_actualizacion_equipos(cine_config):
             print(f"❌ Error en actualización de equipos: {e}")
             time.sleep(300)  # Reintentar en 5 minutos si hay error
 
-import smtplib
-import re
-import time
-from email.message import EmailMessage
-
-import smtplib
-import re
-import time
-from email.message import EmailMessage
-
-import smtplib
-from email.message import EmailMessage
-import time
-import re
-
 def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
     """Envía alerta por correo electrónico al zona_correo y como CCO al NOC"""
     try:
-        noc_email = cine_config.get("noc_email", "jmoreno@cineplanet.com.pe")  # aseguramos variable
 
         # Detectar tipo principal de alerta
         tipo_alerta = "error"
@@ -544,31 +501,28 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
         colores = {
             "error": {
                 "gradient": "linear-gradient(135deg, #dc2626, #ef4444)",
-                "icon": "🚨",
-                "titulo": "Alerta Crítica Detectada",
-                "subtitulo": "Sistema de Monitoreo - Proyector"
+                "icon": "",
+                "titulo": "ERROR DETECTADO"
             },
             "warning": {
                 "gradient": "linear-gradient(135deg, #d97706, #f59e0b)",
                 "icon": "",
-                "titulo": "Advertencia Técnica",
-                "subtitulo": "Sistema de Monitoreo - Proyector"
+                "titulo": "ADVERTENCIA DETECTADA"
             },
             "notification": {
                 "gradient": "linear-gradient(135deg, #2563eb, #3b82f6)",
-                "icon": "ℹ️",
-                "titulo": "Notificación del Sistema",
-                "subtitulo": "Sistema de Monitoreo - Proyector"
+                "icon": "ℹ",
+                "titulo": "NOTIFICACION DETECTADA"
             }
         }
 
         color_config = colores[tipo_alerta]
 
         msg = EmailMessage()
-        msg['Subject'] = f"{color_config['icon']} {color_config['titulo']} - {complejo} - Sala {sala}"
-        msg['From'] = cine_config["email_user"]
+        msg['Subject'] = f"Alerta detectada - {complejo} - Sala {sala}"
+        msg['From'] = os.getenv("noc_email")
         msg['To'] = cine_config["zona_correo"]
-        msg['Bcc'] = noc_email
+        msg['Bcc'] = os.getenv("noc_email")
 
         cuerpo = f"""
         <!DOCTYPE html>
@@ -628,11 +582,11 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
                 }}
                 .info-label {{
                     font-size: 12px;
-                    color: #64748b;
-                    text-transform: uppercase;
+                    color: #292423;
+                    font-weight: bold;
                 }}
                 .info-value {{
-                    font-size: 14px;
+                    font-size: 10px;
                     font-weight: 500;
                 }}
                 .alert-list {{
@@ -706,23 +660,20 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
             <div class="container">
                 <div style="background:{'red' if tipo_alerta=='error' else ('#facc15' if tipo_alerta=='warning' else '#3b82f6')};
                         text-align:center;
-                        padding:30px 20px;
+                        padding:8px 8px;
                         color:#ffffff;
                         font-family:'Segoe UI',Arial,sans-serif;">
-                <h1 style="margin:0;font-size:26px;font-weight:bold;color:#ffffff;">
+                <h1 style="margin:0;font-size:20px;font-weight:bold;color:#ffffff;">
                     {color_config['icon']} {color_config['titulo']}
                 </h1>
-                <p style="margin:6px 0 0 0;font-size:15px;color:#ffffff;">
-                    {color_config['subtitulo']}
-                </p>
             </div>
 
                 <div class="section">
-                    <div class="section-title">📋 Información del Equipo</div>
+                    <div class="section-title">Información del equipo</div>
                     <div class="info-grid">
                         <div class="info-item"><span class="info-label">Complejo</span><span class="info-value">{complejo}</span></div>
                         <div class="info-item"><span class="info-label">Sala</span><span class="info-value">{sala}</span></div>
-                        <div class="info-item"><span class="info-label">Modelo</span><span class="info-value">{modelo}</span></div>
+                        <div class="info-item"><span class="info-label">Equipo</span><span class="info-value">{modelo}</span></div>
                         <div class="info-item"><span class="info-label">Zona</span><span class="info-value">{cine_config['cine_zona']}</span></div>
                         <div class="info-item"><span class="info-label">País</span><span class="info-value">{cine_config['cine_pais']}</span></div>
                         <div class="info-item"><span class="info-label">Fecha</span><span class="info-value">{time.strftime('%Y-%m-%d %H:%M:%S')}</span></div>
@@ -730,7 +681,7 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
                 </div>
 
                 <div class="section">
-                    <div class="section-title">🔍 Alertas Técnicas Detectadas</div>
+                    <div class="section-title">Alertas Detectadas</div>
                     <div class="alert-list">
         """
 
@@ -765,8 +716,8 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
                     </div>
                 </div>
                 <div class="footer">
-                    <strong>Sistema de Monitoreo NOC Audiovisual</strong><br>
-                    Este es un mensaje automático, por favor no responder.<br>
+                    <strong>Sistema de Monitoreo - NOC Audiovisual</strong><br>
+                    Este mensaje es enviado automáticamente por el equipo NOC. No responder.<br>
                     {time.strftime('%Y-%m-%d %H:%M:%S')}
                 </div>
             </div>
@@ -776,9 +727,9 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
 
         msg.set_content(cuerpo, subtype='html')
 
-        with smtplib.SMTP(cine_config["smtp_server"], cine_config["smtp_port"]) as server:
+        with smtplib.SMTP(os.getenv("smtp_server"), os.getenv("smtp_port")) as server:
             server.starttls()
-            server.login(cine_config["email_user"], cine_config["email_pass"])
+            server.login(os.getenv("noc_email"), os.getenv("pass_noc_email"))
             server.send_message(msg)
 
         print(f"✅ Correo de alerta '{tipo_alerta}' enviado correctamente.")
