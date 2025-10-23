@@ -511,7 +511,7 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
             },
             "notification": {
                 "gradient": "linear-gradient(135deg, #2563eb, #3b82f6)",
-                "icon": "ℹ",
+                "icon": "",
                 "titulo": "NOTIFICACION DETECTADA"
             }
         }
@@ -755,6 +755,8 @@ if __name__ == "__main__":
         print("------------------------------------------------------------")
         print("---------------INICIANDO AGENTE DE MONITOREO----------------")
         print("------------------------------------------------------------")
+
+        time.sleep(2)
 
         # Iniciar ciclos en hilos separados
         thread_monitoreo = threading.Thread(

@@ -1,3 +1,14 @@
 {
-  "cine_id": 45
+  "cine_id": 45,
+  "cine_numero": 86,
+  "cine_nombre": "Santa Catalina",
+  "cine_num_salas": 6,
+  "cine_pais": "Peru",
+  "cine_zona": "Centro",
+  "pais_octeto": 234,
+  "zona_correo": "zonacentro@cineplanet.com.pe",
+  "telefono_wahtsapp": "51981283879",
+  "proyector_inicio": 22,
+  "servidor_inicio": 26,
+  "sala_salto": 16
 }
