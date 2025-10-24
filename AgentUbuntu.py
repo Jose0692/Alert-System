@@ -9,8 +9,58 @@ import json
 import socket
 import re
 from dotenv import load_dotenv
+import logging
+from logging.handlers import RotatingFileHandler
+import sys
 
+# Cargar variables de entorno
 load_dotenv('.env')
+
+# Configuración del sistema de logging
+def configurar_logging():
+    """Configura el sistema de logging con formato ordenado y relevante"""
+    
+    # Crear directorio de logs si no existe
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    
+    # Configurar el logger principal
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    
+    # Evitar propagación a logger root
+    logger.propagate = False
+    
+    # Formato ordenado y limpio
+    formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Handler para archivo (con rotación)
+    file_handler = RotatingFileHandler(
+        'logs/agent_ubuntu.log',
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    
+    # Handler para consola (solo mensajes importantes)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    
+    # Limpiar handlers existentes y agregar nuevos
+    logger.handlers.clear()
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Inicializar logging
+logger = configurar_logging()
 
 class GestorConexionesTCP:
     def __init__(self, puerto=43728, timeout_conexion=5, timeout_lectura=2):
@@ -19,6 +69,7 @@ class GestorConexionesTCP:
         self.timeout_lectura = timeout_lectura
         self.conexiones = {}
         self.estados_previos = {}
+        self.logger = logging.getLogger('GestorConexionesTCP')
         
     def conectar_equipo(self, ip):
         """Establece conexión TCP con un equipo"""
@@ -26,11 +77,11 @@ class GestorConexionesTCP:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(self.timeout_conexion)
             s.connect((ip, self.puerto))
-            print(f"✅ Conectado al proyector en {ip}:{self.puerto}")
+            self.logger.info(f"Conectado al proyector en {ip}:{self.puerto}")
             self.conexiones[ip] = s
             return s
         except Exception as e:
-            print(f"❌ Error al conectar a {ip}: {e}")
+            self.logger.error(f"Error al conectar a {ip}: {e}")
             return None
     
     def verificar_conexion(self, ip):
@@ -46,7 +97,7 @@ class GestorConexionesTCP:
             data = s.recv(1)  # Intentar leer al menos un byte
             return s
         except:
-            print(f"🔌 Conexión perdida con {ip}, reconectando...")
+            self.logger.warning(f"Conexión perdida con {ip}, reconectando...")
             try:
                 s.close()
             except:
@@ -62,24 +113,34 @@ class GestorConexionesTCP:
         for ip, s in self.conexiones.items():
             try:
                 s.close()
-                print(f"🔌 Conexión cerrada con {ip}")
+                self.logger.info(f"Conexión cerrada con {ip}")
             except Exception as e:
-                print(f"⚠️ Error al cerrar conexión con {ip}: {e}")
+                self.logger.error(f"Error al cerrar conexión con {ip}: {e}")
         self.conexiones.clear()
 
 gestor_conexiones = GestorConexionesTCP()
 
 def cargar_config_cine(ruta="config_cine.json"):
-    with open(ruta, "r", encoding="utf-8") as f:
-        return json.load(f)
+    logger = logging.getLogger('ConfigLoader')
+    try:
+        with open(ruta, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        logger.info(f"Configuración cargada desde {ruta}")
+        return config
+    except Exception as e:
+        logger.error(f"Error al cargar configuración: {e}")
+        raise
 
 def generar_config_cine(cine_id):
+    logger = logging.getLogger('ConfigGenerator')
     try:
         # Consumir los servicios
-        url_cines =os.getenv("url_cines")
+        url_cines = os.getenv("url_cines")
         url_zonas = os.getenv("url_zonas")
-        url_paises =os.getenv("url_paises")
+        url_paises = os.getenv("url_paises")
         url_salas = os.getenv("url_salas")
+        
+        logger.info("Obteniendo datos de servicios...")
         cines = requests.get(url_cines).json()
         zonas = requests.get(url_zonas).json()
         paises = requests.get(url_paises).json()
@@ -123,11 +184,11 @@ def generar_config_cine(cine_id):
         with open("config_cine.json", "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
-        print("✅ Archivo config.info generado correctamente.")
+        logger.info(f"Archivo config_cine.json generado para cine {cine['nombre_cine']} con {num_salas} salas")
         return config
 
     except Exception as e:
-        print("⚠️ Error al generar config:", str(e))
+        logger.error(f"Error al generar configuración: {e}")
         return None
 
 def generar_ip(cine_config, tipo, indice):
@@ -141,99 +202,107 @@ def generar_ip(cine_config, tipo, indice):
     return f"{base}.{host}"
 
 def generar_equipos(cine_config, archivo_json="estado_equipo.json"):
-    if os.path.exists(archivo_json):
-        try:
-            with open(archivo_json, "r", encoding="utf-8") as f:
-                equipos_existentes = json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
+    logger = logging.getLogger('EquiposGenerator')
+    try:
+        if os.path.exists(archivo_json):
+            try:
+                with open(archivo_json, "r", encoding="utf-8") as f:
+                    equipos_existentes = json.load(f)
+            except (json.JSONDecodeError, FileNotFoundError):
+                equipos_existentes = []
+        else:
             equipos_existentes = []
-    else:
-        equipos_existentes = []
-    
-    equipos_nuevos = []
-    for i in range(cine_config["cine_num_salas"]):
-        sala_numero = i + 1
         
-        proyector_ip = generar_ip(cine_config, "proyector", i)
-        proyector_existente = next((eq for eq in equipos_existentes 
-                                  if eq["ip"] == proyector_ip and eq["tipo"] == "proyector"), None)
+        equipos_nuevos = []
+        for i in range(cine_config["cine_num_salas"]):
+            sala_numero = i + 1
+            
+            proyector_ip = generar_ip(cine_config, "proyector", i)
+            proyector_existente = next((eq for eq in equipos_existentes 
+                                      if eq["ip"] == proyector_ip and eq["tipo"] == "proyector"), None)
+            
+            if proyector_existente:
+                equipo_proyector = {
+                    "tipo": "proyector",
+                    "sala": sala_numero,
+                    "ip": proyector_ip,
+                    "modelo": proyector_existente.get("modelo"),
+                    "estado_alerta": proyector_existente.get("estado_alerta"),
+                    "consumibles": proyector_existente.get("consumibles", []),
+                    "alertas": proyector_existente.get("alertas", []),
+                    "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "estado_actual_tcp": "estado_actual_tcp",
+                    "estado": proyector_existente.get("estado", "desconocido")
+                }
+            else:
+                equipo_proyector = {
+                    "tipo": "proyector",
+                    "sala": sala_numero,
+                    "ip": proyector_ip,
+                    "modelo": None,
+                    "estado_alerta": "Sin alerta",
+                    "consumibles": [],
+                    "alertas": [],
+                    "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "estado_actual_tcp": "estado_actual_tcp",
+                    "estado": "activo"
+                }
+            
+            equipos_nuevos.append(equipo_proyector)
+            
+            servidor_ip = generar_ip(cine_config, "servidor", i)
+            servidor_existente = next((eq for eq in equipos_existentes 
+                                     if eq["ip"] == servidor_ip and eq["tipo"] == "servidor"), None)
+            
+            if servidor_existente:
+                equipo_servidor = {
+                    "tipo": "servidor",
+                    "sala": sala_numero,
+                    "ip": servidor_ip,
+                    "modelo": servidor_existente.get("modelo"),
+                    "consumibles": servidor_existente.get("consumibles", []),
+                    "alertas": servidor_existente.get("alertas", []),
+                    "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "estado_actual_tcp": "estado_actual_tcp",
+                    "estado": servidor_existente.get("estado", "desconocido")
+                }
+            else:
+                equipo_servidor = {
+                    "tipo": "servidor",
+                    "sala": sala_numero,
+                    "ip": servidor_ip,
+                    "modelo": None,
+                    "consumibles": [],
+                    "alertas": [],
+                    "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "estado_actual_tcp": "estado_actual_tcp",
+                    "estado": "activo"
+                }
+            
+            equipos_nuevos.append(equipo_servidor)
         
-        if proyector_existente:
-            equipo_proyector = {
-                "tipo": "proyector",
-                "sala": sala_numero,
-                "ip": proyector_ip,
-                "modelo": proyector_existente.get("modelo"),
-                "estado_alerta": proyector_existente.get("estado_alerta"),
-                "consumibles": proyector_existente.get("consumibles", []),
-                "alertas": proyector_existente.get("alertas", []),
-                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "estado_actual_tcp": "estado_actual_tcp",
-                "estado": proyector_existente.get("estado", "desconocido")
-            }
-        else:
-            equipo_proyector = {
-                "tipo": "proyector",
-                "sala": sala_numero,
-                "ip": proyector_ip,
-                "modelo": None,
-                "estado_alerta": "Sin alerta",
-                "consumibles": [],
-                "alertas": [],
-                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "estado_actual_tcp": "estado_actual_tcp",
-                "estado": "activo"
-            }
+        with open(archivo_json, "w", encoding="utf-8") as f:
+            json.dump(equipos_nuevos, f, indent=4, ensure_ascii=False)
         
-        equipos_nuevos.append(equipo_proyector)
+        logger.info(f"Archivo {archivo_json} actualizado con {len(equipos_nuevos)} equipos")
+        return equipos_nuevos
         
-        servidor_ip = generar_ip(cine_config, "servidor", i)
-        servidor_existente = next((eq for eq in equipos_existentes 
-                                 if eq["ip"] == servidor_ip and eq["tipo"] == "servidor"), None)
-        
-        if servidor_existente:
-            equipo_servidor = {
-                "tipo": "servidor",
-                "sala": sala_numero,
-                "ip": servidor_ip,
-                "modelo": servidor_existente.get("modelo"),
-                "consumibles": servidor_existente.get("consumibles", []),
-                "alertas": servidor_existente.get("alertas", []),
-                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "estado_actual_tcp": "estado_actual_tcp",
-                "estado": servidor_existente.get("estado", "desconocido")
-            }
-        else:
-            equipo_servidor = {
-                "tipo": "servidor",
-                "sala": sala_numero,
-                "ip": servidor_ip,
-                "modelo": None,
-                "consumibles": [],
-                "alertas": [],
-                "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "estado_actual_tcp": "estado_actual_tcp",
-                "estado": "activo"
-            }
-        
-        equipos_nuevos.append(equipo_servidor)
-    
-    with open(archivo_json, "w", encoding="utf-8") as f:
-        json.dump(equipos_nuevos, f, indent=4, ensure_ascii=False)
-    
-    print(f"Archivo {archivo_json} generado/actualizado con {len(equipos_nuevos)} equipos")
-    return equipos_nuevos
+    except Exception as e:
+        logger.error(f"Error al generar equipos: {e}")
+        raise
 
 def enviar_comando_hex(s, comando_hex):
+    logger = logging.getLogger('ComandoTCP')
     try:
         comando = bytes.fromhex(comando_hex)
         s.sendall(comando)
-        print(f"Comando enviado: {comando_hex}")
+        logger.debug(f"Comando enviado: {comando_hex}")
     except Exception as e:
-        print(f"Error al enviar comando: {e}")
+        logger.error(f"Error al enviar comando: {e}")
         raise
 
 def leer_respuesta_ascii(s, buffer_size=4096, timeout=2):
+    logger = logging.getLogger('RespuestaTCP')
     try:
         s.settimeout(timeout)
         data_total = b""
@@ -247,27 +316,25 @@ def leer_respuesta_ascii(s, buffer_size=4096, timeout=2):
                 break
         
         if data_total:
-            try:
-                ascii_text = data_total.decode("ascii", errors="ignore")
-            except Exception as e:
-                print(f"No se pudo decodificar en ASCII: {e}")
+            logger.debug(f"Respuesta recibida: {len(data_total)} bytes")
         else:
-            print("No se recibió respuesta")
-
+            logger.warning("No se recibió respuesta")
+            
         return data_total
     except Exception as e:
-        print(f"❌ Error al leer respuesta: {e}")
+        logger.error(f"Error al leer respuesta: {e}")
         return b""
 
 def procesar_mensajes_texto(ascii_text):
     """Procesa mensajes de alertas en texto ignorando basura antes del XML y retorna las alertas"""
+    logger = logging.getLogger('ProcesadorAlertas')
     alertas_encontradas = []
     
     inicio = ascii_text.find("<?xml")
     if inicio != -1:
         ascii_text = ascii_text[inicio:]
     else:
-        print("⚠️ No se encontró XML en la respuesta")
+        logger.warning("No se encontró XML en la respuesta")
         return alertas_encontradas
 
     # Patrón mejorado para capturar más detalles del XML
@@ -282,7 +349,7 @@ def procesar_mensajes_texto(ascii_text):
     coincidencias = re.findall(patrones[0], ascii_text, re.DOTALL)
 
     if not coincidencias:
-        print("⚠️ No se encontraron mensajes en la respuesta")
+        logger.warning("No se encontraron mensajes en la respuesta")
         # Intentar buscar otros patrones
         for patron in patrones[1:]:
             otras_coincidencias = re.findall(patron, ascii_text, re.DOTALL)
@@ -296,10 +363,7 @@ def procesar_mensajes_texto(ascii_text):
         return alertas_encontradas
 
     for idx, (identificador, tipo, alerta) in enumerate(coincidencias, start=1):
-        print(f"\n📌 Mensaje {idx}")
-        print(f"Identificador: {identificador}")
-        print(f"Tipo: {tipo}")
-        print(f"Alerta: {alerta.strip()}")
+        logger.debug(f"Mensaje {idx} - Tipo: {tipo}, ID: {identificador}")
         
         # Limpiar y formatear la alerta
         alerta_limpia = re.sub(r'\s+', ' ', alerta.strip())
@@ -316,10 +380,12 @@ def procesar_mensajes_texto(ascii_text):
             if detalle_limpio:
                 alertas_encontradas.append(f"   └─ Detalle: {detalle_limpio}")
 
+    logger.info(f"Procesadas {len(alertas_encontradas)} alertas")
     return alertas_encontradas
 
 def consultar_tcp_numero_alertas(s):
     """Consulta el número de alertas activas y retorna las descripciones"""
+    logger = logging.getLogger('ConsultorAlertas')
     enviar_comando_hex(s, "FE 00 81 04 17 9C FF")
     data = leer_respuesta_ascii(s)
     if not data:
@@ -333,10 +399,10 @@ def consultar_tcp_numero_alertas(s):
         errores = int.from_bytes(valores[8:12], "big")
 
         if notificaciones == 0 and warnings == 0 and errores == 0:
-            print("✅ No hay alertas activas")
+            logger.debug("No hay alertas activas")
             return False, []
         else:
-            print(f"⚠️ Alertas activas -> Notificaciones: {notificaciones}, Warnings: {warnings}, Errores: {errores}")
+            logger.warning(f"Alertas activas - Notificaciones: {notificaciones}, Warnings: {warnings}, Errores: {errores}")
             
             enviar_comando_hex(s, "FE 00 81 04 1A 9F FF")
             data_alertas = leer_respuesta_ascii(s)
@@ -348,12 +414,13 @@ def consultar_tcp_numero_alertas(s):
             return True, alertas_descripciones
 
     except ValueError:
-        print("⚠️ No se encontró la cabecera 81 04 17 en la respuesta")
+        logger.warning("No se encontró la cabecera 81 04 17 en la respuesta")
         return False, []
 
 def monitorear_proyector(ip, cine_config, intervalo=2):
     """Monitorea un proyector específico en bucle infinito"""
-    print(f"🎬 Iniciando monitoreo para proyector {ip}")
+    logger = logging.getLogger(f'Monitoreo.{ip}')
+    logger.info(f"Iniciando monitoreo para proyector {ip}")
     
     estado_previo = None
     alertas_activas = []  # Para almacenar las alertas actuales
@@ -372,17 +439,16 @@ def monitorear_proyector(ip, cine_config, intervalo=2):
                 
                 # Verificar si hay cambio de estado
                 if estado_previo and estado_actual != estado_previo:
-                    print(f"🔄 Cambio de estado detectado en {ip}")
+                    logger.info(f"Cambio de estado detectado en {ip}")
                     
-                    # Consultar alertas si hay cambio - AHORA CAPTURAMOS LAS DESCRIPCIONES
+                    # Consultar alertas si hay cambio
                     hay_alertas, descripciones_alertas = consultar_tcp_numero_alertas(s)
                     
                     # Verificar si ha pasado el tiempo mínimo desde el último correo
                     tiempo_actual = time.time()
                     if hay_alertas and descripciones_alertas and (tiempo_actual - ultimo_envio_correo) > tiempo_minimo_entre_alertas:
                         sala_numero = obtener_sala_por_ip(ip, cine_config)
-                        print(f"🚨 Alertas detectadas en Sala {sala_numero} - IP: {ip}")
-                        print(f"📋 Detalles de alertas: {descripciones_alertas}")
+                        logger.warning(f"Alertas detectadas en Sala {sala_numero} - IP: {ip}")
                         
                         # Enviar alerta por correo con las descripciones REALES
                         if enviar_alerta_correo(
@@ -390,10 +456,10 @@ def monitorear_proyector(ip, cine_config, intervalo=2):
                             cine_config["cine_nombre"], 
                             sala_numero, 
                             "Proyector", 
-                            descripciones_alertas  # Usar las alertas reales del proyector
+                            descripciones_alertas
                         ):
-                            ultimo_envio_correo = tiempo_actual  # Actualizar timestamp
-                            print(f"⏰ Próxima alerta para {ip} en {tiempo_minimo_entre_alertas//60} minutos")
+                            ultimo_envio_correo = tiempo_actual
+                            logger.info(f"Alerta enviada. Próxima alerta para {ip} en {tiempo_minimo_entre_alertas//60} minutos")
                     
                     elif hay_alertas and (tiempo_actual - ultimo_envio_correo) > tiempo_minimo_entre_alertas:
                         # Si hay alertas pero no se pudieron obtener las descripciones
@@ -412,16 +478,16 @@ def monitorear_proyector(ip, cine_config, intervalo=2):
                             descripciones_genericas
                         ):
                             ultimo_envio_correo = tiempo_actual
-                            print(f"⏰ Próxima alerta para {ip} en {tiempo_minimo_entre_alertas//60} minutos")
+                            logger.info(f"Alerta genérica enviada para {ip}")
                 
                 estado_previo = estado_actual
             else:
-                print(f"❌ No se pudo establecer conexión con {ip}")
+                logger.error(f"No se pudo establecer conexión con {ip}")
             
             time.sleep(intervalo)
             
         except Exception as e:
-            print(f"❌ Error en monitoreo de {ip}: {e}")
+            logger.error(f"Error en monitoreo de {ip}: {e}")
             time.sleep(intervalo)
 
 def obtener_sala_por_ip(ip, cine_config):
@@ -432,16 +498,18 @@ def obtener_sala_por_ip(ip, cine_config):
     return "Desconocida"
 
 def inicializar_conexiones_proyectores(cine_config):
-    print("Inicializando conexiones TCP con proyectores...")
+    logger = logging.getLogger('InicializadorConexiones')
+    logger.info("Inicializando conexiones TCP con proyectores...")
     
     for i in range(cine_config["cine_num_salas"]):
         proyector_ip = generar_ip(cine_config, "proyector", i)
-        print(f"Conectando a {proyector_ip}...")
+        logger.info(f"Conectando a {proyector_ip}...")
         gestor_conexiones.conectar_equipo(proyector_ip)
-        time.sleep(0.2)  
+        time.sleep(0.2)
 
 def ciclo_monitoreo_continuo(cine_config):
-    print("🎯 Iniciando monitoreo continuo de proyectores...")
+    logger = logging.getLogger('CicloMonitoreo')
+    logger.info("Iniciando monitoreo continuo de proyectores...")
     
     # Inicializar conexiones
     inicializar_conexiones_proyectores(cine_config)
@@ -457,32 +525,35 @@ def ciclo_monitoreo_continuo(cine_config):
         )
         hilo.start()
         hilos.append(hilo)
-        print(f"📊 Monitoreo iniciado para {proyector_ip}")
+        logger.info(f"Monitoreo iniciado para {proyector_ip}")
     
     # Mantener el hilo principal vivo
     try:
         while True:
             time.sleep(60)
-            print("💓 Monitoreo activo...")
+            logger.debug("Monitoreo activo...")
     except KeyboardInterrupt:
-        print("\n🛑 Deteniendo monitoreo...")
+        logger.info("Deteniendo monitoreo por interrupción de usuario")
         gestor_conexiones.cerrar_todas_conexiones()
 
 def ciclo_actualizacion_equipos(cine_config):
     """Ciclo para actualizar información de equipos"""
+    logger = logging.getLogger('ActualizadorEquipos')
+    logger.info("Iniciando ciclo de actualización de equipos")
+    
     while True:
         try:
             generar_equipos(cine_config)
-            print("✅ Información de equipos actualizada")
+            logger.info("Información de equipos actualizada")
             time.sleep(3600)  # Actualizar cada hora
         except Exception as e:
-            print(f"❌ Error en actualización de equipos: {e}")
+            logger.error(f"Error en actualización de equipos: {e}")
             time.sleep(300)  # Reintentar en 5 minutos si hay error
 
 def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
     """Envía alerta por correo electrónico al zona_correo y como CCO al NOC"""
+    logger = logging.getLogger('EmailSender')
     try:
-
         # Detectar tipo principal de alerta
         tipo_alerta = "error"
         if alertas:
@@ -725,6 +796,14 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
         </html>
         """
 
+        msg = EmailMessage()
+        msg['Subject'] = f"Alerta detectada - {complejo} - Sala {sala}"
+        msg['From'] = os.getenv("noc_email")
+        msg['To'] = cine_config["zona_correo"]
+        msg['Bcc'] = os.getenv("noc_email")
+
+        # [Código HTML del correo...]
+        
         msg.set_content(cuerpo, subtype='html')
 
         with smtplib.SMTP(os.getenv("smtp_server"), os.getenv("smtp_port")) as server:
@@ -732,18 +811,21 @@ def enviar_alerta_correo(cine_config, complejo, sala, modelo, alertas):
             server.login(os.getenv("noc_email"), os.getenv("pass_noc_email"))
             server.send_message(msg)
 
-        print(f"✅ Correo de alerta '{tipo_alerta}' enviado correctamente.")
+        logger.info(f"Correo de alerta '{tipo_alerta}' enviado correctamente a {cine_config['zona_correo']}")
         return True
 
     except Exception as e:
-        print(f"❌ Error al enviar correo de alerta: {e}")
+        logger.error(f"Error al enviar correo de alerta: {e}")
         return False
 
 def consultar_snmp(ip, oid="1.3.6.1.2.1.1.1.0"):
-    print("Aqui hago consultas SNMP", ip)
+    logger = logging.getLogger('SNMP')
+    logger.debug(f"Consultando SNMP a {ip} con OID {oid}")
 
 if __name__ == "__main__":
     try:
+        logger.info("Iniciando Agente de Monitoreo Ubuntu")
+        
         cine_config = cargar_config_cine()
         generar_config_cine(cine_config["cine_id"])
 
@@ -752,11 +834,7 @@ if __name__ == "__main__":
         cine_nueva_config = cargar_config_cine()
         generar_equipos(cine_nueva_config)
 
-        print("------------------------------------------------------------")
-        print("---------------INICIANDO AGENTE DE MONITOREO----------------")
-        print("------------------------------------------------------------")
-
-        time.sleep(2)
+        logger.info("Agente inicializado correctamente")
 
         # Iniciar ciclos en hilos separados
         thread_monitoreo = threading.Thread(
@@ -774,16 +852,16 @@ if __name__ == "__main__":
         thread_monitoreo.start()
         thread_actualizacion.start()
 
-        print("Agente inicializado correctamente")
+        logger.info("Todos los hilos iniciados correctamente")
 
         # Mantener el hilo principal vivo
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("\nAgente detenido por el usuario")
+            logger.info("Agente detenido por el usuario")
             gestor_conexiones.cerrar_todas_conexiones()
 
     except Exception as e:
-        print(f"Error crítico: {e}")
+        logger.critical(f"Error crítico en el agente: {e}")
         gestor_conexiones.cerrar_todas_conexiones()

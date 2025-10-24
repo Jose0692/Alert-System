@@ -1,0 +1,97 @@
+2025-10-23 18:27:59 | INFO     | root                 | Iniciando Agente de Monitoreo Ubuntu
+2025-10-23 18:27:59 | INFO     | ConfigLoader         | Configuración cargada desde config_cine.json
+2025-10-23 18:27:59 | INFO     | ConfigGenerator      | Obteniendo datos de servicios...
+2025-10-23 18:28:07 | INFO     | ConfigGenerator      | Archivo config_cine.json generado para cine Primavera con 9 salas
+2025-10-23 18:28:10 | INFO     | ConfigLoader         | Configuración cargada desde config_cine.json
+2025-10-23 18:28:10 | INFO     | EquiposGenerator     | Archivo estado_equipo.json actualizado con 18 equipos
+2025-10-23 18:28:10 | INFO     | root                 | Agente inicializado correctamente
+2025-10-23 18:28:10 | INFO     | CicloMonitoreo       | Iniciando monitoreo continuo de proyectores...
+2025-10-23 18:28:10 | INFO     | ActualizadorEquipos  | Iniciando ciclo de actualización de equipos
+2025-10-23 18:28:10 | INFO     | root                 | Todos los hilos iniciados correctamente
+2025-10-23 18:28:10 | INFO     | InicializadorConexiones | Inicializando conexiones TCP con proyectores...
+2025-10-23 18:28:10 | INFO     | InicializadorConexiones | Conectando a 10.234.6.22...
+2025-10-23 18:28:10 | INFO     | EquiposGenerator     | Archivo estado_equipo.json actualizado con 18 equipos
+2025-10-23 18:28:10 | INFO     | ActualizadorEquipos  | Información de equipos actualizada
+2025-10-23 18:28:10 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.22:43728
+2025-10-23 18:28:11 | INFO     | InicializadorConexiones | Conectando a 10.234.6.38...
+2025-10-23 18:28:11 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.38:43728
+2025-10-23 18:28:11 | INFO     | InicializadorConexiones | Conectando a 10.234.6.54...
+2025-10-23 18:28:11 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.54:43728
+2025-10-23 18:28:11 | INFO     | InicializadorConexiones | Conectando a 10.234.6.70...
+2025-10-23 18:28:11 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.70:43728
+2025-10-23 18:28:11 | INFO     | InicializadorConexiones | Conectando a 10.234.6.86...
+2025-10-23 18:28:11 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.86:43728
+2025-10-23 18:28:12 | INFO     | InicializadorConexiones | Conectando a 10.234.6.102...
+2025-10-23 18:28:12 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.102:43728
+2025-10-23 18:28:12 | INFO     | InicializadorConexiones | Conectando a 10.234.6.118...
+2025-10-23 18:28:12 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.118:43728
+2025-10-23 18:28:12 | INFO     | InicializadorConexiones | Conectando a 10.234.6.134...
+2025-10-23 18:28:12 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.134:43728
+2025-10-23 18:28:12 | INFO     | InicializadorConexiones | Conectando a 10.234.6.150...
+2025-10-23 18:28:12 | INFO     | GestorConexionesTCP  | Conectado al proyector en 10.234.6.150:43728
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.22 | Iniciando monitoreo para proyector 10.234.6.22
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.22
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.38 | Iniciando monitoreo para proyector 10.234.6.38
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.38
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.54 | Iniciando monitoreo para proyector 10.234.6.54
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.54
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.70 | Iniciando monitoreo para proyector 10.234.6.70
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.70
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.86 | Iniciando monitoreo para proyector 10.234.6.86
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.86
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.102 | Iniciando monitoreo para proyector 10.234.6.102
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.102
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.118 | Iniciando monitoreo para proyector 10.234.6.118
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.118
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.134 | Iniciando monitoreo para proyector 10.234.6.134
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.134
+2025-10-23 18:28:12 | INFO     | Monitoreo.10.234.6.150 | Iniciando monitoreo para proyector 10.234.6.150
+2025-10-23 18:28:12 | INFO     | CicloMonitoreo       | Monitoreo iniciado para 10.234.6.150
+2025-10-23 18:30:15 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:30:29 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:30:31 | WARNING  | ConsultorAlertas     | Alertas activas - Notificaciones: 0, Warnings: 4, Errores: 0
+2025-10-23 18:30:33 | INFO     | ProcesadorAlertas    | Procesadas 4 alertas
+2025-10-23 18:30:33 | WARNING  | Monitoreo.10.234.6.22 | Alertas detectadas en Sala 1 - IP: 10.234.6.22
+2025-10-23 18:30:39 | INFO     | EmailSender          | Correo de alerta 'warning' enviado correctamente a jpardo@cineplanet.com.pe
+2025-10-23 18:30:39 | INFO     | Monitoreo.10.234.6.22 | Alerta enviada. Próxima alerta para 10.234.6.22 en 3 minutos
+2025-10-23 18:30:51 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:30:51 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:31:05 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:31:05 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:31:19 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:31:19 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:32:15 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 18:32:29 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 18:32:43 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 18:34:58 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:35:12 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:35:26 | INFO     | Monitoreo.10.234.6.54 | Cambio de estado detectado en 10.234.6.54
+2025-10-23 18:40:53 | INFO     | Monitoreo.10.234.6.102 | Cambio de estado detectado en 10.234.6.102
+2025-10-23 18:41:07 | INFO     | Monitoreo.10.234.6.102 | Cambio de estado detectado en 10.234.6.102
+2025-10-23 18:45:41 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:45:55 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:46:09 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:47:17 | INFO     | Monitoreo.10.234.6.70 | Cambio de estado detectado en 10.234.6.70
+2025-10-23 18:47:32 | INFO     | Monitoreo.10.234.6.70 | Cambio de estado detectado en 10.234.6.70
+2025-10-23 18:47:46 | INFO     | Monitoreo.10.234.6.70 | Cambio de estado detectado en 10.234.6.70
+2025-10-23 18:49:55 | INFO     | Monitoreo.10.234.6.86 | Cambio de estado detectado en 10.234.6.86
+2025-10-23 18:50:00 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:50:09 | INFO     | Monitoreo.10.234.6.86 | Cambio de estado detectado en 10.234.6.86
+2025-10-23 18:50:14 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:50:23 | INFO     | Monitoreo.10.234.6.102 | Cambio de estado detectado en 10.234.6.102
+2025-10-23 18:50:23 | INFO     | Monitoreo.10.234.6.86 | Cambio de estado detectado en 10.234.6.86
+2025-10-23 18:50:28 | INFO     | Monitoreo.10.234.6.150 | Cambio de estado detectado en 10.234.6.150
+2025-10-23 18:50:36 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:50:37 | INFO     | Monitoreo.10.234.6.102 | Cambio de estado detectado en 10.234.6.102
+2025-10-23 18:50:50 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:51:05 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:56:19 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:56:33 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 18:56:47 | INFO     | Monitoreo.10.234.6.22 | Cambio de estado detectado en 10.234.6.22
+2025-10-23 19:00:38 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:00:52 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:01:06 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:12:10 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:12:24 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:12:38 | INFO     | Monitoreo.10.234.6.38 | Cambio de estado detectado en 10.234.6.38
+2025-10-23 19:14:58 | INFO     | Monitoreo.10.234.6.118 | Cambio de estado detectado en 10.234.6.118
